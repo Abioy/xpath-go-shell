@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	//	"launchpad.net/xmlpath"
+	//"launchpad.net/xmlpath"
 	xmlpath "gopkg.in/xmlpath.v2"
 	"os"
 )
@@ -13,7 +13,7 @@ type Target map[string]*xmlpath.Path
 func usage() string {
 	var help string
 	help += "Usage:  xpath-go <PATH> <TARGET>\n"
-	help += "Query html from stdin via xpath expression and output in json.\n"
+	help += "    Query html from stdin via xpath expression and output in json.\n"
 	help += "\n"
 	help += "Arguments:\n"
 	help += "    PATH   : expression to match.\n"
@@ -25,39 +25,47 @@ func usage() string {
 	return help
 }
 
-func Usage() {
-	fmt.Print(usage())
-	os.Exit(1)
+func Usage(errs ...string) {
+	rc := 0
+	var msg string
+	for _, err := range errs {
+		msg += "[ERROR] "
+		msg += err
+		msg += "\n"
+		rc = 1
+	}
+	msg += usage()
+	fmt.Fprint(os.Stderr, msg)
+	os.Exit(rc)
 }
 
 func main() {
 	args := os.Args
 	if args == nil || len(args) < 3 {
-		Usage()
+		Usage("len(args) < 3")
 	}
 	pattern := args[1]
 	targets_str := args[2]
 	path, err := xmlpath.Compile(pattern)
 	if err != nil {
-		Usage()
+		Usage("<PATH> illegal")
 	}
 	var data map[string]string
 	if json.Unmarshal([]byte(targets_str), &data) != nil {
-		Usage()
+		Usage("<TARGET> illegal")
 	}
 	target := Target{}
 	for k, v := range data {
 		target[k], err = xmlpath.Compile(v)
 		if err != nil {
-			Usage()
+			Usage("<TARGET> path illegal")
 		}
 	}
 
 	file := os.Stdin
 	root, err := xmlpath.ParseHTML(file)
 	if err != nil {
-		fmt.Printf("parse os.Stdin failed!\n")
-		os.Exit(1)
+		Usage("parse os.Stdin failed")
 	}
 
 	it := path.Iter(root)
